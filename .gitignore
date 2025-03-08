@@ -23,6 +23,10 @@ dist/
 build/
 out/
 
+# Virtual environment
+venv/
+.venv/
+
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
