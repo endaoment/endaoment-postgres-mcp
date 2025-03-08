@@ -11,6 +11,8 @@ import pg from "pg";
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
+import os from 'os';
 
 // Get the directory of this file
 const __filename = fileURLToPath(import.meta.url);
@@ -59,6 +61,12 @@ Environment Variables:
     "DB_NAME": "database_name"
   }
 
+Fallback Logic:
+  If the environment variable is not found in the .env file, the server will
+  look for it in shell config files (~/.zshrc, ~/.bashrc, ~/.bash_profile, ~/.profile).
+  This is especially useful for Cursor MCP environments where shell config files
+  are not automatically sourced.
+
 Examples:
   1. Using environment variable:
      node server.js --credentials-var MY_CUSTOM_DB_CREDS
@@ -96,28 +104,98 @@ if (isCursorMCP) {
   logger.log('Running in Cursor MCP environment');
 }
 
-// Parse DB credentials from environment variable or .env file
+// Function to parse DB_CREDENTIALS from shell config files
+const parseShellConfigForCredentials = () => {
+  // List of common shell config files to check
+  const configFiles = [
+    '.zshrc',
+    '.bashrc',
+    '.bash_profile',
+    '.profile'
+  ];
+  
+  for (const configFile of configFiles) {
+    try {
+      const configPath = path.join(os.homedir(), configFile);
+      
+      if (!fs.existsSync(configPath)) {
+        logger.log(`~/${configFile} file not found`);
+        continue;
+      }
+      
+      const configContent = fs.readFileSync(configPath, 'utf8');
+      
+      // Enhanced regex to handle different export formats:
+      // - export VAR='value'
+      // - export VAR="value"
+      // - export VAR=value
+      const patterns = [
+        // Single quotes
+        new RegExp(`export\\s+(${options.credentialsVar}|[A-Z_]+DB[A-Z_]*CREDENTIALS[A-Z_]*)\\s*=\\s*'(.+?)'`, 's'),
+        // Double quotes
+        new RegExp(`export\\s+(${options.credentialsVar}|[A-Z_]+DB[A-Z_]*CREDENTIALS[A-Z_]*)\\s*=\\s*"(.+?)"`, 's'),
+        // No quotes
+        new RegExp(`export\\s+(${options.credentialsVar}|[A-Z_]+DB[A-Z_]*CREDENTIALS[A-Z_]*)\\s*=\\s*({.+?})`, 's')
+      ];
+      
+      for (const regex of patterns) {
+        const match = configContent.match(regex);
+        
+        if (match && match.length >= 3) {
+          const varName = match[1];
+          const credentialsJson = match[2];
+          
+          logger.log(`Found ${varName} in ~/${configFile}`);
+          
+          try {
+            const credentials = JSON.parse(credentialsJson);
+            return credentials;
+          } catch (parseError) {
+            logger.error(`Failed to parse JSON from ${varName} in ~/${configFile}: ${parseError.message}`);
+            // Continue trying other patterns or files
+          }
+        }
+      }
+    } catch (error) {
+      logger.error(`Error reading ~/${configFile}: ${error.message}`);
+      // Continue with next config file
+    }
+  }
+  
+  return null;
+};
+
+// Parse DB credentials from environment variable, .env file, or shell config files
 let dbCredentials;
 try {
   // Try to get credentials from environment variable
   const credentialsJson = process.env[options.credentialsVar];
   
   if (!credentialsJson) {
-    throw new Error(`${options.credentialsVar} environment variable not found. Make sure it's defined in .env file.`);
-  }
-  
-  try {
-    dbCredentials = JSON.parse(credentialsJson);
-  } catch (parseError) {
-    throw new Error(`Failed to parse JSON from ${options.credentialsVar}: ${parseError.message}. Ensure it contains valid JSON.`);
-  }
-  
-  if (!options.silent) {
-    logger.log(`Successfully parsed database credentials from ${options.credentialsVar}`);
+    logger.log(`${options.credentialsVar} environment variable not found. Checking shell config files as fallback...`);
+    
+    // Try to get credentials from shell config files
+    dbCredentials = parseShellConfigForCredentials();
+    
+    if (!dbCredentials) {
+      throw new Error(`${options.credentialsVar} not found in environment variables or shell config files.`);
+    }
+    
+    logger.log('Successfully parsed database credentials from shell config file');
+  } else {
+    try {
+      dbCredentials = JSON.parse(credentialsJson);
+      if (!options.silent) {
+        logger.log(`Successfully parsed database credentials from ${options.credentialsVar} environment variable`);
+      }
+    } catch (parseError) {
+      throw new Error(`Failed to parse JSON from ${options.credentialsVar}: ${parseError.message}. Ensure it contains valid JSON.`);
+    }
   }
 } catch (error) {
   logger.error('Error with database credentials:', error.message);
-  logger.error('Make sure your .env file is set up correctly with the DB_CREDENTIALS variable.');
+  logger.error('Make sure your .env file is set up correctly with the DB_CREDENTIALS variable,');
+  logger.error('or ensure DB_CREDENTIALS is properly exported in your shell config file (~/.zshrc, ~/.bashrc, etc.).');
   logger.error('Run with --help for more information on the required format.');
   process.exit(1);
 }

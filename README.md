@@ -41,6 +41,35 @@ touch .env
 export DB_CREDENTIALS='{"DB_USER":"your-username","DB_PASSWORD":"your-password","DB_HOST":"your-host","DB_PORT":"5433","DB_NAME":"your-database"}'
 ```
 
+### Fallback to Shell Config Files
+
+If the `.env` file is not present or the credentials variable is not found, the server will automatically look for the credentials in your shell configuration files in the following order:
+
+1. `~/.zshrc`
+2. `~/.bashrc` 
+3. `~/.bash_profile`
+4. `~/.profile`
+
+This is especially useful in environments where shell config files are not automatically sourced, such as the Cursor MCP environment.
+
+To set up credentials in any of your shell config files:
+
+1. Open your preferred shell config file, for example:
+
+```bash
+nano ~/.zshrc
+# or
+nano ~/.bashrc
+```
+
+2. Add the following line with your actual database credentials:
+
+```bash
+export DB_CREDENTIALS='{"DB_USER":"your-username","DB_PASSWORD":"your-password","DB_HOST":"your-host","DB_PORT":"5433","DB_NAME":"your-database"}'
+```
+
+The server will automatically detect and use these credentials when the `.env` file is not available.
+
 ### Custom Credentials Variable
 
 You can also use a custom environment variable name instead of `DB_CREDENTIALS` by using the `--credentials-var` flag when starting the server:
