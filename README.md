@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/endaoment-endaoment-postgres-mcp-badge.png)](https://mseep.ai/app/endaoment-endaoment-postgres-mcp)
+
 # Model Context Protocol PostgreSQL Server
 
 This project implements a Model Context Protocol (MCP) server that connects to a PostgreSQL database. It allows AI models to interact with your database through a standardized protocol.
