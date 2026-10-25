@@ -1,0 +1,25 @@
+name: Node check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.22.1
+
+      - name: Print Node version
+        run: node --version
+
+      - name: Syntax-check server.js
+        run: node --check server.js
