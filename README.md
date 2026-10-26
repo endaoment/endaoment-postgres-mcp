@@ -12,7 +12,7 @@ This project implements a Model Context Protocol (MCP) server that connects to a
 
 ## Prerequisites
 
-- Node.js 20 or higher
+- Node.js 24.22.1 or higher (Node 20 is end of life and does not get security fixes)
 - PostgreSQL database
 - Access credentials for the database
 
@@ -187,8 +187,8 @@ The server includes:
 
 3. **Node.js Version Issues**
    - Check your Node.js version: `node -v`
-   - This server requires Node.js 20+
-   - If using an older version, install Node.js 20: `nvm install 20 && nvm use 20`
+   - This server requires Node.js 24.22.1 or higher
+   - If using an older version, install it with nvm. The repo has an `.nvmrc`, so run `nvm install && nvm use` from the repo root
 
 ### Cursor Integration
 
